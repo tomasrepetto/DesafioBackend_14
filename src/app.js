@@ -21,6 +21,9 @@ import { addProductService, getProductsService } from './dao/productsMongo.js';
 import { initializaPassport } from './config/passport.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
+// Importar el logger
+import logger from './config/logger.js';
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -54,11 +57,28 @@ app.engine('handlebars', engine());
 app.set('views', path.join(dirname, 'views'));
 app.set('view engine', 'handlebars');
 
+// Middleware para loguear todas las solicitudes HTTP
+app.use((req, res, next) => {
+    logger.http(`${req.method} ${req.url}`);
+    next();
+});
+
 app.use('/', views);
 app.use('/api/products', products);
 app.use('/api/carts', carts);
 app.use('/api/tickets', tickets);
 app.use('/api/auth', auth);
+
+// Endpoint de prueba
+app.get('/loggerTest', (req, res) => {
+    logger.debug('Debug log');
+    logger.http('HTTP log');
+    logger.info('Info log');
+    logger.warning('Warning log');
+    logger.error('Error log');
+    logger.fatal('Fatal log');
+    res.send('Logger test complete');
+});
 
 // Agregar el manejador de errores después de todas las rutas
 app.use(errorHandler);
@@ -66,7 +86,7 @@ app.use(errorHandler);
 try {
     await dbConnection();
     const expressServer = app.listen(PORT, () => {
-        console.log(`Corriendo aplicación en el puerto ${PORT}`);
+        logger.info(`Corriendo aplicación en el puerto ${PORT}`);
     });
     const io = new Server(expressServer);
 
@@ -97,12 +117,14 @@ try {
 
             socket.broadcast.emit('nuevo_user');
         } catch (error) {
-            console.error('Error handling socket connection:', error);
+            logger.error('Error handling socket connection:', error);
         }
     });
 } catch (error) {
-    console.error('Error connecting to the database:', error);
+    logger.error('Error connecting to the database:', error);
 }
+
+
 
 
 
